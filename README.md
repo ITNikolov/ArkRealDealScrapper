@@ -26,7 +26,7 @@ Yes. Here's proof from my backpack.tf seller dashboard:
 | 31 Days  | $2,099.44  |
 | All Time | $6,685.22  |
 
-![Sales Dashboard](https://github.com/user-attachments/assets/fc6dcced-c6c8-4a35-ba43-c5cc81974424)
+![Sales Dashboard]()
 
 > These numbers represent real trades — buying underpriced items spotted by this bot and reselling them at market value. After platform fees, the margins are consistent enough to fund a serious hobby.
 
@@ -222,7 +222,7 @@ ArkRealDealScrapper.sln
 
 ## ⚠️ Notes
 
-- The `cf_clearance` cookie typically expires every **1–7 days** and must be manually refreshed in `PlaywrightSession.cs`
+- The `cf_clearance` cookie typically expires every **month** and must be manually refreshed in `PlaywrightSession.cs`
 - This tool is built for **personal use** — use responsibly and respect backpack.tf's terms of service
 - The bot includes intentional pacing and jitter to avoid hammering the site
 
