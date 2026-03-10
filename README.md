@@ -20,7 +20,7 @@ It runs 24/7 in the background, continuously scanning hundreds of weapon listing
 
 ## 💸 Does It Actually Work?
 
-Yes. Here's proof from my backpack.tf seller dashboard:
+Yes. Here's proof from my mannco.store(site where you sell virtual items for real cash) seller dashboard:
 
 | Period   | Revenue    |
 |----------|------------|
@@ -31,7 +31,7 @@ Yes. Here's proof from my backpack.tf seller dashboard:
 ![Sales Dashboard](assets/dashboard.png)
 ![Sales](assets/sales.png)
 
-> These numbers represent real trades — buying underpriced items spotted by this bot and reselling them at market value. After platform fees, the margins are consistent enough to fund a small hobby.
+> These numbers represent real trades — buying underpriced items spotted by this bot and reselling them at market value. After platform fees, the margins are consistent enough to fund growth for my small hobby.
 
 ---
 
@@ -65,18 +65,24 @@ DealScannerWorker
 
 ---
 
-## 🧩 Why Playwright Instead of an API?
+## 🧩 Why Scrape With Playwright?
 
-backpack.tf's classifieds page is **heavily JavaScript-rendered** — the listing data is injected into the DOM after page load, not present in raw HTML. A simple HTTP request returns nothing useful.
+backpack.tf does not currently have a public API route for classifieds listings. 
+They are actively rebuilding the platform at [next.backpack.tf](https://next.backpack.tf) 
+but classifieds API support isn't available there yet either, so browser automation 
+against the live site is the only viable path right now.
+
+## 🎭 Why Playwright Specifically?
+
+The classifieds page is **heavily JavaScript-rendered** — listing data is injected into 
+the DOM after page load and is not present in the raw HTML. A simple HTTP request returns 
+nothing useful, a real browser is required to execute the JavaScript first.
 
 Playwright drives a real Chromium browser, which means:
 - Full JS execution and DOM rendering
 - Persistent browser profile (survives sessions)
 - Cookie injection to authenticate and maintain session
 - Partial Cloudflare bypass via `cf_clearance` cookie injection
-- Graceful fallback: if a CAPTCHA challenge appears, the bot pauses and prompts you to solve it manually in the open browser window, then resumes automatically
-
----
 
 ## 🎯 What It Scans For
 
