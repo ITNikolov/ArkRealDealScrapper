@@ -8,7 +8,7 @@
 
 **Team Fortress 2** has a player-driven economy where cosmetic weapon upgrades called **Professional Killstreak kits** can be applied to weapons. These kits add visual effects — a glowing eye color (*Killstreaker*) and a sheen that coats your weapon (*Sheen*) — and certain combinations are considered rare or highly desirable.
 
-![Looks](assets/tornado.png)
+![Killstreaker](assets/tornado1.png)  ![Sheen](assets/shotgun1.png)
 
 **backpack.tf** is the primary marketplace where players list items for trade. Prices fluctuate constantly and the best deals disappear in minutes.
 
