@@ -8,6 +8,8 @@
 
 **Team Fortress 2** has a player-driven economy where cosmetic weapon upgrades called **Professional Killstreak kits** can be applied to weapons. These kits add visual effects — a glowing eye color (*Killstreaker*) and a sheen that coats your weapon (*Sheen*) — and certain combinations are considered rare or highly desirable.
 
+![Looks](assets/tornado.png)
+
 **backpack.tf** is the primary marketplace where players list items for trade. Prices fluctuate constantly and the best deals disappear in minutes.
 
 I built **ArkRealDealScrapper** to do the watching for me.
@@ -26,7 +28,8 @@ Yes. Here's proof from my backpack.tf seller dashboard:
 | 31 Days  | $2,099.44  |
 | All Time | $6,685.22  |
 
-![Sales Dashboard]()
+![Sales Dashboard](assets/dashboard.png)
+![Sales](assets/sales.png)
 
 > These numbers represent real trades — buying underpriced items spotted by this bot and reselling them at market value. After platform fees, the margins are consistent enough to fund a serious hobby.
 
@@ -103,23 +106,7 @@ Both files are **hot-reloadable** — no restart needed to add new items or comb
 
 When a match is found, you get a rich embed like this:
 
-```
-🔔 New TF2 match
-Item: Rocket Launcher
-Matched: killstreak combo
-
-KILLSTREAK
-  Killstreaker: Fire Horns
-  Sheen: Team Shine
-
-Listed for:     2 keys, 15 ref
-Lowest listing: 2 keys, 10 ref
-
-SELLER: [Username](steam profile link)
-
-Quick links:
-  [Backpack.tf Listing] [Send Trade Offer] [Steam Inventory] [Backpack Profile]
-```
+![Alert](assets/alert.png)
 
 Everything you need to act on a deal is one click away.
 
