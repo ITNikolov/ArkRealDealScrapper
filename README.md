@@ -1,6 +1,6 @@
 # 🔍 ArkRealDealScrapper
 
-> A personal deal-hunting bot for [backpack.tf](https://backpack.tf/) — built to catch undervalued TF2 killstreak listings before anyone else does.
+> A personal deal-hunting bot for [backpack.tf](https://backpack.tf/) — built to catch undervalued TF2 killstreak listings.
 
 ---
 
