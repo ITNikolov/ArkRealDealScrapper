@@ -31,9 +31,7 @@ Yes. Here's proof from my backpack.tf seller dashboard:
 ![Sales Dashboard](assets/dashboard.png)
 ![Sales](assets/sales.png)
 
-> These numbers represent real trades — buying underpriced items spotted by this bot and reselling them at market value. After platform fees, the margins are consistent enough to fund a serious hobby.
-
-This is the kind of edge that's impossible to achieve manually when you're competing against dozens of traders watching the same listings.
+> These numbers represent real trades — buying underpriced items spotted by this bot and reselling them at market value. After platform fees, the margins are consistent enough to fund a small hobby.
 
 ---
 
