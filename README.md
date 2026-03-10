@@ -26,7 +26,7 @@ Yes. Here's proof from my backpack.tf seller dashboard:
 | 31 Days  | $2,099.44  |
 | All Time | $6,685.22  |
 
-![Sales Dashboard]()
+![Sales Dashboard](assets/dashboard.png)
 
 > These numbers represent real trades — buying underpriced items spotted by this bot and reselling them at market value. After platform fees, the margins are consistent enough to fund a serious hobby.
 
