@@ -25,7 +25,7 @@ Yes. Here's proof from my backpack.tf seller dashboard:
 | Period   | Revenue    |
 |----------|------------|
 | 7 Days   | $258.30    |
-| 31 Days  | $2,099.44  |
+| 31 Days  | $1,963.54  |
 | All Time | $6,685.22  |
 
 ![Sales Dashboard](assets/dashboard.png)
