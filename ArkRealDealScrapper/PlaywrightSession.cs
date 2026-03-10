@@ -1,12 +1,8 @@
-﻿using Microsoft.Playwright;
-using System;
-using System.Collections.Generic;
-using System.Globalization;
-using System.IO;
-using System.Text.Json;
-using System.Threading;
-using System.Threading.Tasks;
-using System.Web;
+﻿using ArkRealDealScrapper.Core.Classifieds;
+using ArkRealDealScrapper.Core.Models;
+using ArkRealDealScrapper.Infrastructure;
+using Microsoft.Playwright;
+
 
 namespace ArkRealDealScrapper.Worker;
 
@@ -18,8 +14,21 @@ public sealed class PlaywrightSession : IAsyncDisposable
 
     private readonly string _baseDir;
     private readonly string _userDataDir;
-    private readonly string _steamCookiePath;
     private readonly string _backpackCookiePath;
+    private readonly ClassifiedsListingExtractor _listingExtractor;
+    public string LastNavigatedUrl { get; private set; } = string.Empty;
+    public IBrowserContext BrowserContext
+    {
+        get
+        {
+            if (_context == null)
+            {
+                throw new InvalidOperationException("PlaywrightSession is not initialized.");
+            }
+
+            return _context;
+        }
+    }
 
     // REPLACE THIS EVERY TIME IT EXPIRES (usually 1–7 days)
     private const string CfClearanceValue =
@@ -27,9 +36,10 @@ public sealed class PlaywrightSession : IAsyncDisposable
 
     public PlaywrightSession()
     {
+        _listingExtractor = new ClassifiedsListingExtractor();
+
         _baseDir = AppContext.BaseDirectory;
         _userDataDir = Path.Combine(_baseDir, "playwright_profile");
-        _steamCookiePath = Path.Combine(_baseDir, "cookies.steam.json");
         _backpackCookiePath = Path.Combine(_baseDir, "cookies.backpack.json");
     }
 
@@ -56,7 +66,6 @@ public sealed class PlaywrightSession : IAsyncDisposable
                 IgnoreDefaultArgs = new[] { "--enable-automation" }
             });
 
-        await TryLoadCookiesAsync(_steamCookiePath, "steamcommunity.com", ct);
         await TryLoadCookiesAsync(_backpackCookiePath, "backpack.tf", ct);
 
         if (!string.IsNullOrWhiteSpace(CfClearanceValue) &&
@@ -79,60 +88,98 @@ public sealed class PlaywrightSession : IAsyncDisposable
             Console.WriteLine("WARNING: cf_clearance is not set!");
         }
 
-        // Debug cookies
-        var cookies = await _context.CookiesAsync(["https://backpack.tf"]);
-        Console.WriteLine($"backpack.tf cookies count: {cookies.Count}");
-        foreach (var c in cookies)
-            Console.WriteLine($"  • {c.Name,-22} {c.Domain,-18} {c.Path}");
-
         _page = await _context.NewPageAsync();
     }
 
-    public async Task<string> GetHtmlAsync(
-        string baseUrl,
-        string itemName = "",
-        int page = 1,
-        int? quality = null,
-        int? killstreakTier = null,
-        CancellationToken cancellationToken = default)
+    public async Task<SellListingDetails> GetFirstSellListingDetailsAsync(
+    string currentPageUrl,
+    CancellationToken cancellationToken)
     {
-        if (_page == null || _page.IsClosed)
-            _page = await _context!.NewPageAsync();
+        if (_page == null)
+        {
+            return new SellListingDetails();
+        }
+
+        return await _listingExtractor.GetFirstSellListingDetailsAsync(_page, currentPageUrl, cancellationToken);
+    }
+
+    public async Task<List<SellListingDetails>> GetSellListingsFromCurrentPageAsync(
+    string currentPageUrl,
+    CancellationToken cancellationToken)
+    {
+        List<SellListingDetails> results = new List<SellListingDetails>();
+
+        if (_page == null)
+        {
+            return results;
+        }
+
+        return await _listingExtractor.GetSellListingsFromCurrentPageAsync(_page, currentPageUrl, cancellationToken);
+    }
+
+    public async Task<string> GetHtmlAsync(
+    string baseUrl,
+    string itemName = "",
+    int page = 1,
+    int? quality = null,
+    int? killstreakTier = null,
+    CancellationToken cancellationToken = default,
+    int? australium = -1)
+    {
+        if (_context != null && (_page == null || _page.IsClosed))
+        {
+            _page = await _context.NewPageAsync();
+        }
+
+        if (_page == null)
+        {
+            return string.Empty;
+        }
 
         try
         {
-            var query = new List<string> { "tradable=1", "craftable=1", "australium=-1", $"page={page}" };
+            int resolvedQuality = quality.HasValue ? quality.Value : 11;
+            int resolvedKillstreakTier = killstreakTier.HasValue ? killstreakTier.Value : 3;
 
-            if (!string.IsNullOrWhiteSpace(itemName))
-                query.Add($"item={Uri.EscapeDataString(StripLeadingThe(itemName.Trim()))}");
+            string url = ClassifiedsUrlBuilder.Build(
+            baseUrl: baseUrl,
+            itemName: itemName,
+            page: page,
+            quality: resolvedQuality,
+            killstreakTier: resolvedKillstreakTier,
+            tradable: true,
+            craftable: true,
+            australium: australium);
 
-            if (quality.HasValue) query.Add($"quality={quality.Value}");
-            if (killstreakTier.HasValue) query.Add($"killstreak_tier={killstreakTier.Value}");
+            Console.WriteLine("→ Navigating: " + url);
 
-            string url = $"{baseUrl}?{string.Join("&", query)}";
-            Console.WriteLine($"→ Navigating: {url}");
-
-            var response = await _page.GotoAsync(url, new PageGotoOptions
+            IResponse? response = await _page.GotoAsync(url, new PageGotoOptions
             {
-                WaitUntil = WaitUntilState.NetworkIdle,
+                WaitUntil = WaitUntilState.DOMContentLoaded,
                 Timeout = 90000
             });
 
-            if (response?.Ok != true)
+            LastNavigatedUrl = _page.Url;
+
+            if (response != null && response.Ok != true)
             {
-                Console.WriteLine($"  HTTP → {response?.Status} {response?.StatusText}");
+                Console.WriteLine("  HTTP → " + response.Status + " " + response.StatusText);
             }
 
-            await Task.Delay(3500, cancellationToken);     // Cloudflare needs time
-            await WaitForContentOrManualVerifyAsync(_page, cancellationToken);
-            await Task.Delay(1500, cancellationToken);
+            // Instead of fixed multi-second delays, rely on the real content wait.
+            await BackpackPageWaiter.WaitForContentOrManualVerifyAsync(_page, cancellationToken);
+
+            // Small settle (optional) so attributes are definitely present
+            await Task.Delay(300, cancellationToken);
 
             string html = await _page.ContentAsync();
 
-            if (html.Contains("turnstile") || html.Contains("Just a moment") ||
-                html.Contains("Attention Required") || html.Contains("cf-browser-verification"))
+            if (html.Contains("turnstile", StringComparison.OrdinalIgnoreCase) ||
+                html.Contains("just a moment", StringComparison.OrdinalIgnoreCase) ||
+                html.Contains("attention required", StringComparison.OrdinalIgnoreCase) ||
+                html.Contains("cf-browser-verification", StringComparison.OrdinalIgnoreCase))
             {
-                Console.WriteLine("→ Cloudflare protection page detected");
+                Console.WriteLine("→ Protection page detected");
             }
 
             return html;
@@ -141,9 +188,13 @@ public sealed class PlaywrightSession : IAsyncDisposable
         {
             Console.WriteLine("GetHtmlAsync failed:");
             Console.WriteLine(ex.Message);
+
             if (ex.InnerException != null)
+            {
                 Console.WriteLine("Inner: " + ex.InnerException.Message);
-            return "";
+            }
+
+            return string.Empty;
         }
     }
 
@@ -151,76 +202,18 @@ public sealed class PlaywrightSession : IAsyncDisposable
     {
         if (!File.Exists(path))
         {
-            Console.WriteLine($"Cookie file missing: {path}");
+            Console.WriteLine("Cookie file missing: " + path);
             return;
         }
 
-        List<Cookie> cookies;
+        List<Cookie> cookies = await CookieFileLoader.LoadCookiesAsync(path, domainHint, ct);
 
-        try
+        Console.WriteLine("Loaded " + cookies.Count + " cookies from " + Path.GetFileName(path));
+
+        if (_context != null && cookies.Count > 0)
         {
-            cookies = await CookieFileLoader.LoadCookiesAsync(path, domainHint, ct);
+            await _context.AddCookiesAsync(cookies);
         }
-        catch
-        {
-            Console.WriteLine($"Loader failed → falling back to manual parse: {path}");
-            cookies = await ImportCookiesFromFileAsync(path);
-        }
-
-        Console.WriteLine($"Loaded {cookies.Count} cookies from {Path.GetFileName(path)}");
-
-        if (cookies.Count > 0)
-            await _context!.AddCookiesAsync(cookies);
-    }
-
-    private static async Task<List<Cookie>> ImportCookiesFromFileAsync(string path)
-    {
-        var json = await File.ReadAllTextAsync(path);
-        var doc = JsonDocument.Parse(json);
-        var list = new List<Cookie>();
-
-        foreach (var item in doc.RootElement.EnumerateArray())
-        {
-            list.Add(new Cookie
-            {
-                Name = item.TryGetProperty("name", out var n) ? n.GetString() ?? "" : "",
-                Value = item.TryGetProperty("value", out var v) ? v.GetString() ?? "" : "",
-                Domain = item.TryGetProperty("domain", out var d) ? d.GetString() ?? "" : "",
-                Path = item.TryGetProperty("path", out var p) ? p.GetString() ?? "/" : "/"
-            });
-        }
-
-        return list;
-    }
-
-    private static async Task WaitForContentOrManualVerifyAsync(IPage page, CancellationToken ct)
-    {
-        var listings = page.WaitForSelectorAsync("li.listing", new() { Timeout = 20000 });
-        var noItems = page.WaitForSelectorAsync(":has-text('No items found')", new() { Timeout = 20000 });
-        var verify = page.WaitForSelectorAsync("text=/verify|human|turnstile|just a moment/i", new() { Timeout = 20000 });
-
-        var finished = await Task.WhenAny(listings, noItems, verify, Task.Delay(Timeout.Infinite, ct));
-
-        if (finished == verify)
-        {
-            Console.WriteLine("\n!!! VERIFICATION DETECTED !!!");
-            Console.WriteLine("Solve the challenge in the browser, then press ENTER here...");
-            Console.ReadLine();
-            Console.WriteLine("Continuing after manual solve...\n");
-
-            await Task.WhenAny(
-                page.WaitForSelectorAsync("li.listing", new() { Timeout = 60000 }),
-                page.WaitForSelectorAsync(":has-text('No items found')", new() { Timeout = 60000 })
-            );
-        }
-    }
-
-    private static string StripLeadingThe(string s)
-    {
-        s = s?.Trim() ?? "";
-        return s.StartsWith("The ", StringComparison.OrdinalIgnoreCase)
-            ? s[4..].Trim()
-            : s;
     }
 
     public async ValueTask DisposeAsync()

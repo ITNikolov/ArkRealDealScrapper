@@ -1,0 +1,318 @@
+﻿[
+  {
+    "Name": "Rocket Launcher",
+    "AustraliumMode": "Exclude",
+    "QueryName": "Rocket Launcher"
+  },
+  {
+    "Name": "Scattergun",
+    "AustraliumMode": "Exclude",
+    "QueryName": "Scattergun"
+  },
+  {
+    "Name": "Medi Gun",
+    "AustraliumMode": "Exclude",
+    "QueryName": "Medi Gun"
+  },
+  {
+    "Name": "Sniper Rifle",
+    "AustraliumMode": "Exclude",
+    "QueryName": "Sniper Rifle"
+  },
+  {
+    "Name": "Flame Thrower",
+    "AustraliumMode": "Exclude",
+    "QueryName": "Flame Thrower"
+  },
+  {
+    "Name": "Shotgun",
+    "AustraliumMode": "Exclude",
+    "QueryName": "Shotgun"
+  },
+  {
+    "Name": "Minigun",
+    "AustraliumMode": "Exclude",
+    "QueryName": "Minigun"
+  },
+  {
+    "Name": "Stickybomb Launcher",
+    "AustraliumMode": "Exclude",
+    "QueryName": "Stickybomb Launcher"
+  },
+  {
+    "Name": "Tomislav",
+    "AustraliumMode": "Exclude",
+    "QueryName": "Tomislav"
+  },
+  {
+    "Name": "Grenade Launcher",
+    "AustraliumMode": "Exclude",
+    "QueryName": "Grenade Launcher"
+  },
+  {
+    "Name": "Original",
+    "AustraliumMode": "Exclude",
+    "QueryName": "Original"
+  },
+  {
+    "Name": "Black Box",
+    "AustraliumMode": "Exclude",
+    "QueryName": "Black Box"
+  },
+  {
+    "Name": "Force-a-Nature",
+    "AustraliumMode": "Exclude",
+    "QueryName": "Force-a-Nature"
+  },
+  {
+    "Name": "AWPer Hand",
+    "AustraliumMode": "Exclude",
+    "QueryName": "AWPer Hand"
+  },
+  {
+    "Name": "Degreaser",
+    "AustraliumMode": "Exclude",
+    "QueryName": "Degreaser"
+  },
+  {
+    "Name": "Conniver's Kunai",
+    "AustraliumMode": "Exclude",
+    "QueryName": "Conniver's Kunai"
+  },
+  {
+    "Name": "Knife",
+    "AustraliumMode": "Exclude",
+    "QueryName": "Knife"
+  },
+  {
+    "Name": "Ambassador",
+    "AustraliumMode": "Exclude",
+    "QueryName": "Ambassador"
+  },
+  {
+    "Name": "Kritzkrieg",
+    "AustraliumMode": "Exclude",
+    "QueryName": "Kritzkrieg"
+  },
+  {
+    "Name": "Iron Bomber",
+    "AustraliumMode": "Exclude",
+    "QueryName": "Iron Bomber"
+  },
+  {
+    "Name": "Phlogistinator",
+    "AustraliumMode": "Exclude",
+    "QueryName": "Phlogistinator"
+  },
+  {
+    "Name": "Jag",
+    "AustraliumMode": "Exclude",
+    "QueryName": "Jag"
+  },
+  {
+    "Name": "Panic Attack",
+    "AustraliumMode": "Exclude",
+    "QueryName": "Panic Attack"
+  },
+  {
+    "Name": "Beggar's Bazooka",
+    "AustraliumMode": "Exclude",
+    "QueryName": "Beggar's Bazooka"
+  },
+  {
+    "Name": "Crusader's Crossbow",
+    "AustraliumMode": "Exclude",
+    "QueryName": "Crusader's Crossbow"
+  },
+  {
+    "Name": "Market Gardener",
+    "AustraliumMode": "Exclude",
+    "QueryName": "Market Gardener"
+  },
+  {
+    "Name": "Direct Hit",
+    "AustraliumMode": "Exclude",
+    "QueryName": "Direct Hit"
+  },
+  {
+    "Name": "Frontier Justice",
+    "AustraliumMode": "Exclude",
+    "QueryName": "Frontier Justice"
+  },
+  {
+    "Name": "Frying Pan",
+    "AustraliumMode": "Exclude",
+    "QueryName": "Frying Pan"
+  },
+  {
+    "Name": "SMG",
+    "AustraliumMode": "Exclude",
+    "QueryName": "SMG"
+  },
+  {
+    "Name": "Soda Popper",
+    "AustraliumMode": "Exclude",
+    "QueryName": "Soda Popper"
+  },
+  {
+    "Name": "Half-Zatoichi",
+    "AustraliumMode": "Exclude",
+    "QueryName": "Half-Zatoichi"
+  },
+  {
+    "Name": "Pistol",
+    "AustraliumMode": "Exclude",
+    "QueryName": "Pistol"
+  },
+  {
+    "Name": "Vaccinator",
+    "AustraliumMode": "Exclude",
+    "QueryName": "Vaccinator"
+  },
+  {
+    "Name": "Loch-n-Load",
+    "AustraliumMode": "Exclude",
+    "QueryName": "Loch-n-Load"
+  },
+  {
+    "Name": "Hitman's Heatmaker",
+    "AustraliumMode": "Exclude",
+    "QueryName": "Hitman's Heatmaker"
+  },
+  {
+    "Name": "Quick-Fix",
+    "AustraliumMode": "Exclude",
+    "QueryName": "Quick-Fix"
+  },
+  {
+    "Name": "Scorch Shot",
+    "AustraliumMode": "Exclude",
+    "QueryName": "Scorch Shot"
+  },
+  {
+    "Name": "Air Strike",
+    "AustraliumMode": "Exclude",
+    "QueryName": "Air Strike"
+  },
+  {
+    "Name": "Flare Gun",
+    "AustraliumMode": "Exclude",
+    "QueryName": "Flare Gun"
+  },
+  {
+    "Name": "Backburner",
+    "AustraliumMode": "Exclude",
+    "QueryName": "Backburner"
+  },
+  {
+    "Name": "Brass Beast",
+    "AustraliumMode": "Exclude",
+    "QueryName": "Brass Beast"
+  },
+  {
+    "Name": "Cow Mangler 5000",
+    "AustraliumMode": "Exclude",
+    "QueryName": "Cow Mangler 5000"
+  },
+  {
+    "Name": "Übersaw",
+    "AustraliumMode": "Exclude",
+    "QueryName": "Übersaw"
+  },
+  {
+    "Name": "Eyelander",
+    "AustraliumMode": "Exclude",
+    "QueryName": "Eyelander"
+  },
+  {
+    "Name": "Spy-Cicle",
+    "AustraliumMode": "Exclude",
+    "QueryName": "Spy-Cicle"
+  },
+  {
+    "Name": "Big Earner",
+    "AustraliumMode": "Exclude",
+    "QueryName": "Big Earner"
+  },
+  {
+    "Name": "Classic",
+    "AustraliumMode": "Exclude",
+    "QueryName": "Classic"
+  },
+
+  {
+    "Name": "Rocket Launcher",
+    "AustraliumMode": "Only",
+    "QueryName": "Rocket Launcher"
+  },
+  {
+    "Name": "Force-a-Nature",
+    "AustraliumMode": "Only",
+    "QueryName": "Force-a-Nature"
+  },
+  {
+    "Name": "Black Box",
+    "AustraliumMode": "Only",
+    "QueryName": "Black Box"
+  },
+  {
+    "Name": "Tomislav",
+    "AustraliumMode": "Only",
+    "QueryName": "Tomislav"
+  },
+  {
+    "Name": "Frontier Justice",
+    "AustraliumMode": "Only",
+    "QueryName": "Frontier Justice"
+  },
+  {
+    "Name": "Ambassador",
+    "AustraliumMode": "Only",
+    "QueryName": "Ambassador"
+  },
+  {
+    "Name": "Scattergun",
+    "AustraliumMode": "Only",
+    "QueryName": "Scattergun"
+  },
+  {
+    "Name": "Flame Thrower",
+    "AustraliumMode": "Only",
+    "QueryName": "Flame Thrower"
+  },
+  {
+    "Name": "Grenade Launcher",
+    "AustraliumMode": "Only",
+    "QueryName": "Grenade Launcher"
+  },
+  {
+    "Name": "Stickybomb Launcher",
+    "AustraliumMode": "Only",
+    "QueryName": "Stickybomb Launcher"
+  },
+  {
+    "Name": "Minigun",
+    "AustraliumMode": "Only",
+    "QueryName": "Minigun"
+  },
+  {
+    "Name": "Knife",
+    "AustraliumMode": "Only",
+    "QueryName": "Knife"
+  },
+  {
+    "Name": "Sniper Rifle",
+    "AustraliumMode": "Only",
+    "QueryName": "Sniper Rifle"
+  },
+  {
+    "Name": "Medi Gun",
+    "AustraliumMode": "Only",
+    "QueryName": "Medi Gun"
+  },
+  {
+    "Name": "SMG",
+    "AustraliumMode": "Only",
+    "QueryName": "SMG"
+  }
+]
