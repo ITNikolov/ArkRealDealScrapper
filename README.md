@@ -108,7 +108,7 @@ Both files are **hot-reloadable** — no restart needed to add new items or comb
 
 ## 📣 Discord Alert Example
 
-When a match is found, you get a rich embed like this:
+When a match is found, you get a rich embed alert like this:
 
 ![Alert](assets/alert.png)
 
