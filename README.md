@@ -218,5 +218,3 @@ ArkRealDealScrapper.sln
 - The bot includes intentional pacing and jitter to avoid hammering the site
 
 ---
-
-*Built out of curiosity, refined by profit.*
