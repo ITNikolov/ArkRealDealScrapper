@@ -58,7 +58,10 @@ public sealed class DealScannerWorker : BackgroundService
 
             string itemsPath = Path.Combine(AppContext.BaseDirectory, scan.ItemsFile);
             string combosPath = Path.Combine(AppContext.BaseDirectory, scan.CombosFile);
-            string seenPath = Path.Combine(AppContext.BaseDirectory, scan.SeenFile);
+
+            string dataDir = Environment.GetEnvironmentVariable("DATA_DIR")
+                ?? (Directory.Exists("/data") ? "/data" : AppContext.BaseDirectory);
+            string seenPath = Path.Combine(dataDir, "seen.json");
 
             SeenStore seenStore = new SeenStore(seenPath);
             await seenStore.LoadAsync(stoppingToken);

@@ -30,9 +30,10 @@ public sealed class PlaywrightSession : IAsyncDisposable
         }
     }
 
-    // REPLACE THIS EVERY TIME IT EXPIRES (usually 1–7 days)
-    private const string CfClearanceValue =
-        "Sexoy5eVSqpNJ81uagy_rJH9BVEWBrEzKM6E_rCrdZ0-1770997613-1.2.1.1-wZGmNq.GeaV9X0p55CedSteT.UsW1xcizE9xNTXu51H3X14s70rcy6dNxZFKW2nv6sJzZS6Ub1rsjDuk_KjQtDRLL6_w7RIUoyLZA_Hfej8I1faj55xsC9IY5ysB0ftE98VIVCf1VYWVnYnDUGtJt658Dh5oZ3ta0p3_W1kbvnWFZ1YIftwz.5tC5214y86pVz7rtYL5.Br2CqmSiGnN2WXhLkqX0ptN50FiYVtprwU";
+    // Set the CF_CLEARANCE environment variable in Railway (expires every 1–7 days).
+    // Get a fresh value from your browser's DevTools → Application → Cookies → backpack.tf → cf_clearance
+    private static string CfClearanceValue =>
+        Environment.GetEnvironmentVariable("CF_CLEARANCE") ?? string.Empty;
 
     public PlaywrightSession()
     {
@@ -40,7 +41,7 @@ public sealed class PlaywrightSession : IAsyncDisposable
 
         _baseDir = AppContext.BaseDirectory;
         _userDataDir = Path.Combine(_baseDir, "playwright_profile");
-        _backpackCookiePath = Path.Combine(_baseDir, "cookies.backpack.json");
+        _backpackCookiePath = Path.Combine(_baseDir, "playwright_profile", "cookies.backpack.json");
     }
 
     public async Task InitAsync(CancellationToken ct = default)
@@ -53,11 +54,14 @@ public sealed class PlaywrightSession : IAsyncDisposable
             _userDataDir,
             new BrowserTypeLaunchPersistentContextOptions
             {
-                Headless = false,
+                Headless = true,
                 SlowMo = 50,
                 ViewportSize = new ViewportSize { Width = 1280, Height = 720 },
                 Args = new[]
                 {
+                    "--no-sandbox",
+                    "--disable-setuid-sandbox",
+                    "--disable-gpu",
                     "--disable-blink-features=AutomationControlled",
                     "--disable-infobars",
                     "--window-size=1280,720",

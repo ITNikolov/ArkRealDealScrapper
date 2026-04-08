@@ -47,19 +47,11 @@ public static class BackpackPageWaiter
                 return;
             }
 
-            Console.WriteLine("\n!!! VERIFICATION DETECTED !!!");
-            Console.WriteLine("Solve the challenge in the browser, then press ENTER here...");
-            Console.ReadLine();
-            Console.WriteLine("Continuing after manual solve...\n");
-
-            PageWaitForSelectorOptions longWait = new PageWaitForSelectorOptions
-            {
-                Timeout = 60000
-            };
-
-            await Task.WhenAny(
-                page.WaitForSelectorAsync("li.listing, div.item[data-listing_price]", longWait),
-                page.WaitForSelectorAsync(":has-text('No items found')", longWait));
+            // In headless/server mode we cannot solve Cloudflare challenges manually.
+            // Log a warning and return — the cf_clearance cookie (CF_CLEARANCE env var) is likely
+            // expired and needs to be refreshed in Railway environment variables.
+            Console.WriteLine("\n!!! CLOUDFLARE CHALLENGE DETECTED — cf_clearance may be expired !!!");
+            Console.WriteLine("Update the CF_CLEARANCE environment variable in Railway with a fresh value.");
         }
     }
 }
