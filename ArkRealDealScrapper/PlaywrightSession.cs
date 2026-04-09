@@ -54,7 +54,7 @@ public sealed class PlaywrightSession : IAsyncDisposable
             _userDataDir,
             new BrowserTypeLaunchPersistentContextOptions
             {
-                Headless = true,
+                Headless = false,
                 SlowMo = 50,
                 ViewportSize = new ViewportSize { Width = 1280, Height = 720 },
                 Args = new[]
