@@ -64,11 +64,13 @@ public static class BackpackPageWaiter
 
             if (solveResult == solvedListings || solveResult == solvedNoItems)
             {
-                Console.WriteLine("Cloudflare challenge auto-solved.");
+                // Let any post-challenge redirects and cookie writes fully settle
+                await Task.Delay(3000, ct);
+                Console.WriteLine($"Cloudflare challenge auto-solved. Final URL: {page.Url}");
             }
             else
             {
-                Console.WriteLine("Cloudflare challenge not solved within 40s — proxy may be blocked.");
+                Console.WriteLine($"Cloudflare challenge not solved within 40s — proxy may be blocked. URL: {page.Url}");
             }
         }
     }
