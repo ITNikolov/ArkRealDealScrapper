@@ -30,6 +30,21 @@ public sealed class KeyPriceService
             return _cachedKeyPriceRef;
         }
 
+        // KEY_PRICE_REF env var lets you pin the real market price (e.g. "57.94").
+        // The backpack.tf IGetCurrencies API returns the community suggestion price
+        // which can lag the actual trading price by weeks. Set this in Railway and
+        // update it when key prices shift significantly.
+        string? pinned = Environment.GetEnvironmentVariable("KEY_PRICE_REF");
+        if (!string.IsNullOrWhiteSpace(pinned) &&
+            decimal.TryParse(pinned, NumberStyles.Any, CultureInfo.InvariantCulture, out decimal pinnedPrice) &&
+            pinnedPrice > 0m)
+        {
+            Console.WriteLine($"KeyPriceRef from env var KEY_PRICE_REF: {pinnedPrice}");
+            _cachedKeyPriceRef = pinnedPrice;
+            _cachedKeyPriceUtc = DateTime.UtcNow;
+            return pinnedPrice;
+        }
+
         string url = $"https://backpack.tf/api/IGetCurrencies/v1?key={ApiKey}";
 
         HttpResponseMessage response = await _http.GetAsync(url, cancellationToken);
