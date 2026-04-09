@@ -51,7 +51,7 @@ public sealed class DealScannerWorker : BackgroundService
         await session.InitAsync(stoppingToken);
         _logger.LogInformation("Browser session ready.");
 
-        KeyPriceService keyPriceService = new KeyPriceService(session.BrowserContext);
+        KeyPriceService keyPriceService = new KeyPriceService();
 
         while (!stoppingToken.IsCancellationRequested)
         {
@@ -113,7 +113,7 @@ public sealed class DealScannerWorker : BackgroundService
 
                         await session.DisposeAsync();
                         await session.ReinitAsync(proxyRotator.Current, stoppingToken);
-                        keyPriceService = new KeyPriceService(session.BrowserContext);
+                        keyPriceService = new KeyPriceService();
                         _logger.LogInformation("Browser session restarted with new proxy.");
                     }
 

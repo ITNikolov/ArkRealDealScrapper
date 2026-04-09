@@ -1,24 +1,25 @@
-﻿using Microsoft.Playwright;
 using System;
-using System.Collections.Generic;
 using System.Globalization;
+using System.Net.Http;
+using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 
 namespace ArkRealDealScrapper.Infrastructure;
 
+/// <summary>
+/// Fetches the Mann Co. Supply Crate Key price in ref via the backpack.tf IGetCurrencies API.
+/// No browser / Cloudflare involvement — a plain HTTPS call.
+/// </summary>
 public sealed class KeyPriceService
 {
-    private readonly IBrowserContext _context;
-    private IPage? _keyPage;
+    private static readonly HttpClient _http = new HttpClient();
 
     private decimal _cachedKeyPriceRef;
     private DateTime _cachedKeyPriceUtc;
 
-    public KeyPriceService(IBrowserContext context)
-    {
-        _context = context ?? throw new ArgumentNullException(nameof(context));
-    }
+    private static string ApiKey =>
+        Environment.GetEnvironmentVariable("BACKPACK_TF_API_KEY") ?? string.Empty;
 
     public async Task<decimal> GetKeyPriceRefAsync(CancellationToken cancellationToken)
     {
@@ -29,112 +30,73 @@ public sealed class KeyPriceService
             return _cachedKeyPriceRef;
         }
 
-        if (_keyPage == null || _keyPage.IsClosed)
+        string url = $"https://backpack.tf/api/IGetCurrencies/v1?key={ApiKey}";
+
+        HttpResponseMessage response = await _http.GetAsync(url, cancellationToken);
+
+        if (!response.IsSuccessStatusCode)
         {
-            _keyPage = await _context.NewPageAsync();
+            Console.WriteLine($"IGetCurrencies failed: HTTP {(int)response.StatusCode}");
+            return _cachedKeyPriceRef > 0m ? _cachedKeyPriceRef : 0m;
         }
 
-        string url =
-            "https://backpack.tf/classifieds" +
-            "?tradable=1&craftable=1" +
-            "&page=1" +
-            "&item=" + Uri.EscapeDataString("Mann Co. Supply Crate Key") +
-            "&quality=6";
+        string json = await response.Content.ReadAsStringAsync(cancellationToken);
 
-        await _keyPage.GotoAsync(url, new PageGotoOptions
+        decimal price = ParseKeyPriceRef(json);
+
+        if (price > 0m)
         {
-            WaitUntil = WaitUntilState.DOMContentLoaded,
-            Timeout = 90000
-        });
-
-        await BackpackPageWaiter.WaitForContentOrManualVerifyAsync(_keyPage, cancellationToken);
-
-        string selector = "div.item[data-listing_intent='sell'][data-listing_price]";
-
-        try
-        {
-            await _keyPage.WaitForSelectorAsync(selector, new PageWaitForSelectorOptions
-            {
-                Timeout = 30000,
-                State = WaitForSelectorState.Attached
-            });
+            _cachedKeyPriceRef = price;
+            _cachedKeyPriceUtc = DateTime.UtcNow;
+            Console.WriteLine("KeyPriceRef updated: " + price.ToString(CultureInfo.InvariantCulture));
         }
-        catch (TimeoutException)
+        else
         {
-            Console.WriteLine("Key price timeout waiting for listings. URL: " + _keyPage.Url);
-            return 0m;
+            Console.WriteLine("Could not parse key price from IGetCurrencies response.");
         }
 
-        IReadOnlyList<IElementHandle> items = await _keyPage.QuerySelectorAllAsync(selector);
-
-        List<decimal> pricesRef = new List<decimal>();
-
-        foreach (IElementHandle item in items)
-        {
-            if (pricesRef.Count >= 5)
-            {
-                break;
-            }
-
-            string raw = (await item.GetAttributeAsync("data-listing_price")) ?? string.Empty;
-
-            decimal refOnly = ParseRefOnly(raw);
-            if (refOnly > 0m)
-            {
-                pricesRef.Add(refOnly);
-            }
-        }
-
-        if (pricesRef.Count == 0)
-        {
-            return 0m;
-        }
-
-        decimal sum = 0m;
-        foreach (decimal p in pricesRef)
-        {
-            sum += p;
-        }
-
-        decimal avg = sum / pricesRef.Count;
-
-        _cachedKeyPriceRef = avg;
-        _cachedKeyPriceUtc = DateTime.UtcNow;
-
-        Console.WriteLine("KeyPriceRef updated: " + avg.ToString(CultureInfo.InvariantCulture));
-
-        return avg;
+        return _cachedKeyPriceRef > 0m ? _cachedKeyPriceRef : price;
     }
 
-    private static decimal ParseRefOnly(string priceRaw)
+    private static decimal ParseKeyPriceRef(string json)
     {
-        if (string.IsNullOrWhiteSpace(priceRaw))
+        try
         {
+            using JsonDocument doc = JsonDocument.Parse(json);
+            JsonElement root = doc.RootElement;
+
+            // Response shape: { "response": { "currencies": { "keys": { "price": { "value": 53.77 } } } } }
+            JsonElement currencies = root
+                .GetProperty("response")
+                .GetProperty("currencies");
+
+            if (!currencies.TryGetProperty("keys", out JsonElement keys))
+            {
+                return 0m;
+            }
+
+            JsonElement price = keys.GetProperty("price");
+
+            // value is in ref when currency == "metal", otherwise it's a key count
+            if (price.TryGetProperty("currency", out JsonElement currencyEl) &&
+                currencyEl.GetString() == "metal" &&
+                price.TryGetProperty("value", out JsonElement valueEl))
+            {
+                return valueEl.GetDecimal();
+            }
+
+            // Fallback: try value directly (may already be in ref)
+            if (price.TryGetProperty("value", out JsonElement fallback))
+            {
+                return fallback.GetDecimal();
+            }
+
             return 0m;
         }
-
-        string s = priceRaw.ToLowerInvariant();
-
-        if (s.Contains("key"))
+        catch (Exception ex)
         {
+            Console.WriteLine("ParseKeyPriceRef error: " + ex.Message);
             return 0m;
         }
-
-        int refIndex = s.IndexOf("ref", StringComparison.Ordinal);
-        if (refIndex < 0)
-        {
-            return 0m;
-        }
-
-        string numberPart = s.Substring(0, refIndex).Trim();
-
-        decimal value;
-        bool ok = decimal.TryParse(
-            numberPart,
-            NumberStyles.Any,
-            CultureInfo.InvariantCulture,
-            out value);
-
-        return ok ? value : 0m;
     }
 }
