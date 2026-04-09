@@ -58,6 +58,7 @@ public sealed class PlaywrightSession : IAsyncDisposable
             Headless = false,
             SlowMo = 50,
             ViewportSize = new ViewportSize { Width = 1280, Height = 720 },
+            UserAgent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/133.0.0.0 Safari/537.36",
             Args = new[]
             {
                 "--no-sandbox",
@@ -87,6 +88,51 @@ public sealed class PlaywrightSession : IAsyncDisposable
             contextOptions);
 
         await TryLoadCookiesAsync(_backpackCookiePath, "backpack.tf", ct);
+
+        // Stealth: patch browser fingerprint signals checked by Cloudflare
+        await _context.AddInitScriptAsync(@"
+            // Remove webdriver flag
+            Object.defineProperty(navigator, 'webdriver', { get: () => undefined, configurable: true });
+
+            // Mock chrome runtime (absent in plain Chromium builds)
+            if (!window.chrome) {
+                Object.defineProperty(window, 'chrome', {
+                    value: { runtime: {}, loadTimes: function(){}, csi: function(){}, app: {} },
+                    configurable: true
+                });
+            }
+
+            // Mock plugins (empty list is a bot signal)
+            Object.defineProperty(navigator, 'plugins', {
+                get: () => {
+                    const arr = [
+                        { name: 'Chrome PDF Plugin', filename: 'internal-pdf-viewer', description: 'Portable Document Format' },
+                        { name: 'Chrome PDF Viewer', filename: 'mhjfbmdgcfjbbpaeojofohoefgiehjai', description: '' },
+                        { name: 'Native Client', filename: 'internal-nacl-plugin', description: '' }
+                    ];
+                    Object.setPrototypeOf(arr, PluginArray.prototype);
+                    return arr;
+                },
+                configurable: true
+            });
+
+            // Fix languages
+            Object.defineProperty(navigator, 'languages', {
+                get: () => ['en-US', 'en'],
+                configurable: true
+            });
+
+            // Fix permissions query (Cloudflare probes notifications permission)
+            try {
+                const _origQuery = navigator.permissions.query.bind(navigator.permissions);
+                navigator.permissions.query = (params) => {
+                    if (params && params.name === 'notifications') {
+                        return Promise.resolve({ state: 'denied', onchange: null });
+                    }
+                    return _origQuery(params);
+                };
+            } catch (e) {}
+        ");
 
         // cf_clearance is IP-bound — injecting it from env var causes mismatches when using
         // residential proxies. Let the browser acquire its own clearance via auto-solve.
