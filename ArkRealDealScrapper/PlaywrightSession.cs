@@ -88,25 +88,8 @@ public sealed class PlaywrightSession : IAsyncDisposable
 
         await TryLoadCookiesAsync(_backpackCookiePath, "backpack.tf", ct);
 
-        if (!string.IsNullOrWhiteSpace(CfClearanceValue) &&
-            CfClearanceValue != "YOUR_CF_CLEARANCE_VALUE_HERE")
-        {
-            await _context.AddCookiesAsync(new[]
-            {
-                new Cookie
-                {
-                    Name = "cf_clearance",
-                    Value = CfClearanceValue,
-                    Domain = "backpack.tf",
-                    Path = "/"
-                }
-            });
-            Console.WriteLine("→ Added cf_clearance cookie");
-        }
-        else
-        {
-            Console.WriteLine("WARNING: cf_clearance is not set!");
-        }
+        // cf_clearance is IP-bound — injecting it from env var causes mismatches when using
+        // residential proxies. Let the browser acquire its own clearance via auto-solve.
 
         _page = await _context.NewPageAsync();
     }

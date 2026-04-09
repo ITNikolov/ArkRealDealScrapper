@@ -47,11 +47,29 @@ public static class BackpackPageWaiter
                 return;
             }
 
-            // In headless/server mode we cannot solve Cloudflare challenges manually.
-            // Log a warning and return — the cf_clearance cookie (CF_CLEARANCE env var) is likely
-            // expired and needs to be refreshed in Railway environment variables.
-            Console.WriteLine($"\n!!! CLOUDFLARE CHALLENGE DETECTED on: {page.Url}");
-            Console.WriteLine("Update the CF_CLEARANCE environment variable in Railway with a fresh value.");
+            // Cloudflare JS challenge detected — with a real browser on a residential proxy
+            // the challenge should auto-solve. Wait up to 40 seconds for the browser to pass it.
+            Console.WriteLine($"Cloudflare challenge detected on: {page.Url}");
+            Console.WriteLine("Waiting up to 40s for browser to auto-solve...");
+
+            PageWaitForSelectorOptions autoSolveWait = new PageWaitForSelectorOptions
+            {
+                Timeout = 40000
+            };
+
+            Task<IElementHandle?> solvedListings = page.WaitForSelectorAsync("li.listing, div.item[data-listing_price]", autoSolveWait);
+            Task<IElementHandle?> solvedNoItems = page.WaitForSelectorAsync(":has-text('No items found')", autoSolveWait);
+
+            Task solveResult = await Task.WhenAny(solvedListings, solvedNoItems, Task.Delay(40000, ct));
+
+            if (solveResult == solvedListings || solveResult == solvedNoItems)
+            {
+                Console.WriteLine("Cloudflare challenge auto-solved.");
+            }
+            else
+            {
+                Console.WriteLine("Cloudflare challenge not solved within 40s — proxy may be blocked.");
+            }
         }
     }
 }
