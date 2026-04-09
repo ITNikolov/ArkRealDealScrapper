@@ -44,9 +44,12 @@ public sealed class DealScannerWorker : BackgroundService
         ProxyRotator proxyRotator = new ProxyRotator();
         int consecutiveCloudflareFailures = 0;
         const int MaxFailuresBeforeRotate = 3;
+        int cycleNumber = 0;
 
+        _logger.LogInformation("Starting browser session. Proxy={HasProxy}", proxyRotator.HasProxies ? "yes" : "none");
         await using PlaywrightSession session = new PlaywrightSession(proxyRotator.Current);
         await session.InitAsync(stoppingToken);
+        _logger.LogInformation("Browser session ready.");
 
         KeyPriceService keyPriceService = new KeyPriceService(session.BrowserContext);
 
@@ -55,10 +58,13 @@ public sealed class DealScannerWorker : BackgroundService
             ScanOptions scan = _scanOptionsMonitor.CurrentValue;
             DiscordOptions discord = _discordOptionsMonitor.CurrentValue;
 
+            cycleNumber++;
             System.Diagnostics.Stopwatch cycleWatch = System.Diagnostics.Stopwatch.StartNew();
             int pagesScanned = 0;
             int listingsSeen = 0;
             int matchesSent = 0;
+
+            _logger.LogInformation("=== Cycle #{Cycle} started ===", cycleNumber);
 
             string itemsPath = Path.Combine(AppContext.BaseDirectory, scan.ItemsFile);
             string combosPath = Path.Combine(AppContext.BaseDirectory, scan.CombosFile);
@@ -92,21 +98,23 @@ public sealed class DealScannerWorker : BackgroundService
                     continue;
                 }
 
+                _logger.LogInformation("Fetching key price...");
                 decimal keyPriceRef = await keyPriceService.GetKeyPriceRefAsync(stoppingToken);
                 if (keyPriceRef <= 0m)
                 {
                     consecutiveCloudflareFailures++;
-                    _logger.LogWarning("KeyPriceRef is 0 (Cloudflare block #{Count}). Skipping this cycle.", consecutiveCloudflareFailures);
+                    _logger.LogWarning("Cloudflare blocked key price fetch (failure {Count}/{Max}).", consecutiveCloudflareFailures, MaxFailuresBeforeRotate);
 
                     if (proxyRotator.HasProxies && consecutiveCloudflareFailures >= MaxFailuresBeforeRotate)
                     {
-                        _logger.LogWarning("Rotating proxy after {Count} consecutive failures.", consecutiveCloudflareFailures);
+                        _logger.LogWarning("Rotating to next proxy after {Count} consecutive failures.", MaxFailuresBeforeRotate);
                         proxyRotator.Rotate();
                         consecutiveCloudflareFailures = 0;
 
                         await session.DisposeAsync();
                         await session.ReinitAsync(proxyRotator.Current, stoppingToken);
                         keyPriceService = new KeyPriceService(session.BrowserContext);
+                        _logger.LogInformation("Browser session restarted with new proxy.");
                     }
 
                     cycleWatch.Stop();

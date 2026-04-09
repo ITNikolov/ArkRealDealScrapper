@@ -50,7 +50,7 @@ public static class BackpackPageWaiter
             // In headless/server mode we cannot solve Cloudflare challenges manually.
             // Log a warning and return — the cf_clearance cookie (CF_CLEARANCE env var) is likely
             // expired and needs to be refreshed in Railway environment variables.
-            Console.WriteLine("\n!!! CLOUDFLARE CHALLENGE DETECTED — cf_clearance may be expired !!!");
+            Console.WriteLine($"\n!!! CLOUDFLARE CHALLENGE DETECTED on: {page.Url}");
             Console.WriteLine("Update the CF_CLEARANCE environment variable in Railway with a fresh value.");
         }
     }
