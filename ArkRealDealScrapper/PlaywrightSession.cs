@@ -35,12 +35,12 @@ public sealed class PlaywrightSession : IAsyncDisposable
     private static string CfClearanceValue =>
         Environment.GetEnvironmentVariable("CF_CLEARANCE") ?? string.Empty;
 
-    private string _proxyUrl;
+    private ProxyEntry? _proxy;
 
-    public PlaywrightSession(string proxyUrl = "")
+    public PlaywrightSession(ProxyEntry? proxy = null)
     {
         _listingExtractor = new ClassifiedsListingExtractor();
-        _proxyUrl = proxyUrl;
+        _proxy = proxy;
 
         _baseDir = AppContext.BaseDirectory;
         _userDataDir = Path.Combine(_baseDir, "playwright_profile");
@@ -71,10 +71,15 @@ public sealed class PlaywrightSession : IAsyncDisposable
             IgnoreDefaultArgs = new[] { "--enable-automation" }
         };
 
-        if (!string.IsNullOrWhiteSpace(_proxyUrl))
+        if (_proxy != null)
         {
-            contextOptions.Proxy = new Proxy { Server = _proxyUrl };
-            Console.WriteLine("Using proxy: " + MaskProxy(_proxyUrl));
+            contextOptions.Proxy = new Proxy
+            {
+                Server = _proxy.Server,
+                Username = _proxy.Username,
+                Password = _proxy.Password
+            };
+            Console.WriteLine("Using proxy: " + _proxy.DisplayName);
         }
 
         _context = await _playwright.Chromium.LaunchPersistentContextAsync(
@@ -231,7 +236,7 @@ public sealed class PlaywrightSession : IAsyncDisposable
         }
     }
 
-    public async Task ReinitAsync(string newProxyUrl, CancellationToken ct = default)
+    public async Task ReinitAsync(ProxyEntry? newProxy, CancellationToken ct = default)
     {
         if (_context != null)
         {
@@ -243,25 +248,11 @@ public sealed class PlaywrightSession : IAsyncDisposable
         _playwright = null;
         _page = null;
 
-        _proxyUrl = newProxyUrl;
+        _proxy = newProxy;
         await InitAsync(ct);
     }
 
-    private static string MaskProxy(string url)
-    {
-        // Show host only, hide credentials
-        try
-        {
-            Uri uri = new Uri(url);
-            return uri.Host + ":" + uri.Port;
-        }
-        catch
-        {
-            return "(proxy)";
-        }
-    }
-
-    public async ValueTask DisposeAsync()
+public async ValueTask DisposeAsync()
     {
         if (_context != null)
         {

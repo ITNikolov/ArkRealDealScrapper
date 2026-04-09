@@ -3,24 +3,33 @@ using System.Collections.Generic;
 
 namespace ArkRealDealScrapper.Worker;
 
+public sealed class ProxyEntry
+{
+    public string Server { get; init; } = string.Empty;   // http://host:port
+    public string Username { get; init; } = string.Empty;
+    public string Password { get; init; } = string.Empty;
+    public string DisplayName { get; init; } = string.Empty;
+}
+
 /// <summary>
 /// Parses the PROXIES environment variable (one proxy per line, format: host:port:user:pass)
-/// and provides proxy URLs for Playwright in http://user:pass@host:port format.
+/// and provides structured proxy entries for Playwright.
 /// </summary>
 public sealed class ProxyRotator
 {
-    private readonly List<string> _proxyUrls;
+    private readonly List<ProxyEntry> _proxies;
     private int _currentIndex;
 
-    public bool HasProxies => _proxyUrls.Count > 0;
+    public bool HasProxies => _proxies.Count > 0;
 
     public ProxyRotator()
     {
-        _proxyUrls = new List<string>();
+        _proxies = new List<ProxyEntry>();
 
         string? raw = Environment.GetEnvironmentVariable("PROXIES");
         if (string.IsNullOrWhiteSpace(raw))
         {
+            Console.WriteLine("No PROXIES env var set — running without proxy.");
             return;
         }
 
@@ -38,42 +47,40 @@ public sealed class ProxyRotator
             string[] parts = trimmed.Split(':');
             if (parts.Length != 4)
             {
-                Console.WriteLine("Skipping invalid proxy entry: " + trimmed);
+                Console.WriteLine("Skipping invalid proxy entry (expected host:port:user:pass): " + trimmed);
                 continue;
             }
 
-            string host = parts[0].Trim();
-            string port = parts[1].Trim();
-            string user = parts[2].Trim();
-            string pass = parts[3].Trim();
-
-            string url = $"http://{user}:{pass}@{host}:{port}";
-            _proxyUrls.Add(url);
+            _proxies.Add(new ProxyEntry
+            {
+                Server = $"http://{parts[0].Trim()}:{parts[1].Trim()}",
+                Username = parts[2].Trim(),
+                Password = parts[3].Trim(),
+                DisplayName = $"{parts[0].Trim()}:{parts[1].Trim()}"
+            });
         }
 
-        // Shuffle so different deployments start on different proxies
-        Shuffle(_proxyUrls);
-
-        Console.WriteLine($"Loaded {_proxyUrls.Count} proxies.");
+        Shuffle(_proxies);
+        Console.WriteLine($"Loaded {_proxies.Count} proxies.");
     }
 
-    public string Current => _proxyUrls.Count > 0
-        ? _proxyUrls[_currentIndex % _proxyUrls.Count]
-        : string.Empty;
+    public ProxyEntry? Current => _proxies.Count > 0
+        ? _proxies[_currentIndex % _proxies.Count]
+        : null;
 
-    public string Rotate()
+    public ProxyEntry? Rotate()
     {
-        if (_proxyUrls.Count == 0)
+        if (_proxies.Count == 0)
         {
-            return string.Empty;
+            return null;
         }
 
-        _currentIndex = (_currentIndex + 1) % _proxyUrls.Count;
-        Console.WriteLine($"Rotated to proxy index {_currentIndex}.");
+        _currentIndex = (_currentIndex + 1) % _proxies.Count;
+        Console.WriteLine($"Rotated to proxy {_proxies[_currentIndex].DisplayName} (index {_currentIndex}).");
         return Current;
     }
 
-    private static void Shuffle(List<string> list)
+    private static void Shuffle<T>(List<T> list)
     {
         Random rng = new Random();
         for (int i = list.Count - 1; i > 0; i--)
