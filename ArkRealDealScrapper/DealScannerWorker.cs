@@ -41,7 +41,11 @@ public sealed class DealScannerWorker : BackgroundService
         string baseUrl = "https://backpack.tf/classifieds";
         Random random = new Random();
 
-        await using PlaywrightSession session = new PlaywrightSession();
+        ProxyRotator proxyRotator = new ProxyRotator();
+        int consecutiveCloudflareFailures = 0;
+        const int MaxFailuresBeforeRotate = 3;
+
+        await using PlaywrightSession session = new PlaywrightSession(proxyRotator.Current);
         await session.InitAsync(stoppingToken);
 
         KeyPriceService keyPriceService = new KeyPriceService(session.BrowserContext);
@@ -91,7 +95,20 @@ public sealed class DealScannerWorker : BackgroundService
                 decimal keyPriceRef = await keyPriceService.GetKeyPriceRefAsync(stoppingToken);
                 if (keyPriceRef <= 0m)
                 {
-                    _logger.LogWarning("KeyPriceRef is 0. Skipping this cycle.");
+                    consecutiveCloudflareFailures++;
+                    _logger.LogWarning("KeyPriceRef is 0 (Cloudflare block #{Count}). Skipping this cycle.", consecutiveCloudflareFailures);
+
+                    if (proxyRotator.HasProxies && consecutiveCloudflareFailures >= MaxFailuresBeforeRotate)
+                    {
+                        _logger.LogWarning("Rotating proxy after {Count} consecutive failures.", consecutiveCloudflareFailures);
+                        proxyRotator.Rotate();
+                        consecutiveCloudflareFailures = 0;
+
+                        await session.DisposeAsync();
+                        await session.ReinitAsync(proxyRotator.Current, stoppingToken);
+                        keyPriceService = new KeyPriceService(session.BrowserContext);
+                    }
+
                     cycleWatch.Stop();
                     _logger.LogInformation("Cycle finished. DurationMs={DurationMs} PagesScanned={Pages} ListingsSeen={Listings} MatchesSent={Matches}",
                         cycleWatch.ElapsedMilliseconds, pagesScanned, listingsSeen, matchesSent);
@@ -99,6 +116,8 @@ public sealed class DealScannerWorker : BackgroundService
                     await Task.Delay(GetJitteredDelayMs(scan.CycleDelayMs, scan.JitterPercent, random), stoppingToken);
                     continue;
                 }
+
+                consecutiveCloudflareFailures = 0;
 
                 _logger.LogInformation("New scan cycle started. KeyPriceRef={KeyPriceRef}", keyPriceRef);
 

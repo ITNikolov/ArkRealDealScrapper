@@ -35,9 +35,12 @@ public sealed class PlaywrightSession : IAsyncDisposable
     private static string CfClearanceValue =>
         Environment.GetEnvironmentVariable("CF_CLEARANCE") ?? string.Empty;
 
-    public PlaywrightSession()
+    private string _proxyUrl;
+
+    public PlaywrightSession(string proxyUrl = "")
     {
         _listingExtractor = new ClassifiedsListingExtractor();
+        _proxyUrl = proxyUrl;
 
         _baseDir = AppContext.BaseDirectory;
         _userDataDir = Path.Combine(_baseDir, "playwright_profile");
@@ -50,25 +53,33 @@ public sealed class PlaywrightSession : IAsyncDisposable
 
         _playwright = await Playwright.CreateAsync();
 
+        var contextOptions = new BrowserTypeLaunchPersistentContextOptions
+        {
+            Headless = false,
+            SlowMo = 50,
+            ViewportSize = new ViewportSize { Width = 1280, Height = 720 },
+            Args = new[]
+            {
+                "--no-sandbox",
+                "--disable-setuid-sandbox",
+                "--disable-gpu",
+                "--disable-blink-features=AutomationControlled",
+                "--disable-infobars",
+                "--window-size=1280,720",
+                "--disable-dev-shm-usage"
+            },
+            IgnoreDefaultArgs = new[] { "--enable-automation" }
+        };
+
+        if (!string.IsNullOrWhiteSpace(_proxyUrl))
+        {
+            contextOptions.Proxy = new Proxy { Server = _proxyUrl };
+            Console.WriteLine("Using proxy: " + MaskProxy(_proxyUrl));
+        }
+
         _context = await _playwright.Chromium.LaunchPersistentContextAsync(
             _userDataDir,
-            new BrowserTypeLaunchPersistentContextOptions
-            {
-                Headless = false,
-                SlowMo = 50,
-                ViewportSize = new ViewportSize { Width = 1280, Height = 720 },
-                Args = new[]
-                {
-                    "--no-sandbox",
-                    "--disable-setuid-sandbox",
-                    "--disable-gpu",
-                    "--disable-blink-features=AutomationControlled",
-                    "--disable-infobars",
-                    "--window-size=1280,720",
-                    "--disable-dev-shm-usage"
-                },
-                IgnoreDefaultArgs = new[] { "--enable-automation" }
-            });
+            contextOptions);
 
         await TryLoadCookiesAsync(_backpackCookiePath, "backpack.tf", ct);
 
@@ -217,6 +228,36 @@ public sealed class PlaywrightSession : IAsyncDisposable
         if (_context != null && cookies.Count > 0)
         {
             await _context.AddCookiesAsync(cookies);
+        }
+    }
+
+    public async Task ReinitAsync(string newProxyUrl, CancellationToken ct = default)
+    {
+        if (_context != null)
+        {
+            await _context.CloseAsync().ContinueWith(_ => { });
+            _context = null;
+        }
+
+        _playwright?.Dispose();
+        _playwright = null;
+        _page = null;
+
+        _proxyUrl = newProxyUrl;
+        await InitAsync(ct);
+    }
+
+    private static string MaskProxy(string url)
+    {
+        // Show host only, hide credentials
+        try
+        {
+            Uri uri = new Uri(url);
+            return uri.Host + ":" + uri.Port;
+        }
+        catch
+        {
+            return "(proxy)";
         }
     }
 
