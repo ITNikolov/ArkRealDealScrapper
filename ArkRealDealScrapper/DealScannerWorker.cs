@@ -41,15 +41,8 @@ public sealed class DealScannerWorker : BackgroundService
         string baseUrl = "https://backpack.tf/classifieds";
         Random random = new Random();
 
-        ProxyRotator proxyRotator = new ProxyRotator();
-        int consecutiveCloudflareFailures = 0;
-        const int MaxFailuresBeforeRotate = 3;
-        int cycleNumber = 0;
-
-        _logger.LogInformation("Starting browser session. Proxy={HasProxy}", proxyRotator.HasProxies ? "yes" : "none");
-        await using PlaywrightSession session = new PlaywrightSession(proxyRotator.Current);
+        await using PlaywrightSession session = new PlaywrightSession();
         await session.InitAsync(stoppingToken);
-        _logger.LogInformation("Browser session ready.");
 
         KeyPriceService keyPriceService = new KeyPriceService(session.BrowserContext);
 
@@ -58,20 +51,14 @@ public sealed class DealScannerWorker : BackgroundService
             ScanOptions scan = _scanOptionsMonitor.CurrentValue;
             DiscordOptions discord = _discordOptionsMonitor.CurrentValue;
 
-            cycleNumber++;
             System.Diagnostics.Stopwatch cycleWatch = System.Diagnostics.Stopwatch.StartNew();
             int pagesScanned = 0;
             int listingsSeen = 0;
             int matchesSent = 0;
 
-            _logger.LogInformation("=== Cycle #{Cycle} started ===", cycleNumber);
-
             string itemsPath = Path.Combine(AppContext.BaseDirectory, scan.ItemsFile);
             string combosPath = Path.Combine(AppContext.BaseDirectory, scan.CombosFile);
-
-            string dataDir = Environment.GetEnvironmentVariable("DATA_DIR")
-                ?? (Directory.Exists("/data") ? "/data" : AppContext.BaseDirectory);
-            string seenPath = Path.Combine(dataDir, "seen.json");
+            string seenPath = Path.Combine(AppContext.BaseDirectory, scan.SeenFile);
 
             SeenStore seenStore = new SeenStore(seenPath);
             await seenStore.LoadAsync(stoppingToken);
@@ -98,25 +85,10 @@ public sealed class DealScannerWorker : BackgroundService
                     continue;
                 }
 
-                _logger.LogInformation("Fetching key price...");
                 decimal keyPriceRef = await keyPriceService.GetKeyPriceRefAsync(stoppingToken);
                 if (keyPriceRef <= 0m)
                 {
-                    consecutiveCloudflareFailures++;
-                    _logger.LogWarning("Cloudflare blocked key price fetch (failure {Count}/{Max}).", consecutiveCloudflareFailures, MaxFailuresBeforeRotate);
-
-                    if (proxyRotator.HasProxies && consecutiveCloudflareFailures >= MaxFailuresBeforeRotate)
-                    {
-                        _logger.LogWarning("Rotating to next proxy after {Count} consecutive failures.", MaxFailuresBeforeRotate);
-                        proxyRotator.Rotate();
-                        consecutiveCloudflareFailures = 0;
-
-                        await session.DisposeAsync();
-                        await session.ReinitAsync(proxyRotator.Current, stoppingToken);
-                        keyPriceService = new KeyPriceService(session.BrowserContext);
-                        _logger.LogInformation("Browser session restarted with new proxy.");
-                    }
-
+                    _logger.LogWarning("KeyPriceRef is 0. Skipping this cycle.");
                     cycleWatch.Stop();
                     _logger.LogInformation("Cycle finished. DurationMs={DurationMs} PagesScanned={Pages} ListingsSeen={Listings} MatchesSent={Matches}",
                         cycleWatch.ElapsedMilliseconds, pagesScanned, listingsSeen, matchesSent);
@@ -124,8 +96,6 @@ public sealed class DealScannerWorker : BackgroundService
                     await Task.Delay(GetJitteredDelayMs(scan.CycleDelayMs, scan.JitterPercent, random), stoppingToken);
                     continue;
                 }
-
-                consecutiveCloudflareFailures = 0;
 
                 _logger.LogInformation("New scan cycle started. KeyPriceRef={KeyPriceRef}", keyPriceRef);
 

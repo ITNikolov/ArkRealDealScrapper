@@ -30,21 +30,17 @@ public sealed class PlaywrightSession : IAsyncDisposable
         }
     }
 
-    // Set the CF_CLEARANCE environment variable in Railway (expires every 1–7 days).
-    // Get a fresh value from your browser's DevTools → Application → Cookies → backpack.tf → cf_clearance
-    private static string CfClearanceValue =>
-        Environment.GetEnvironmentVariable("CF_CLEARANCE") ?? string.Empty;
+    // REPLACE THIS EVERY TIME IT EXPIRES (usually 1–7 days)
+    private const string CfClearanceValue =
+        "Sexoy5eVSqpNJ81uagy_rJH9BVEWBrEzKM6E_rCrdZ0-1770997613-1.2.1.1-wZGmNq.GeaV9X0p55CedSteT.UsW1xcizE9xNTXu51H3X14s70rcy6dNxZFKW2nv6sJzZS6Ub1rsjDuk_KjQtDRLL6_w7RIUoyLZA_Hfej8I1faj55xsC9IY5ysB0ftE98VIVCf1VYWVnYnDUGtJt658Dh5oZ3ta0p3_W1kbvnWFZ1YIftwz.5tC5214y86pVz7rtYL5.Br2CqmSiGnN2WXhLkqX0ptN50FiYVtprwU";
 
-    private ProxyEntry? _proxy;
-
-    public PlaywrightSession(ProxyEntry? proxy = null)
+    public PlaywrightSession()
     {
         _listingExtractor = new ClassifiedsListingExtractor();
-        _proxy = proxy;
 
         _baseDir = AppContext.BaseDirectory;
         _userDataDir = Path.Combine(_baseDir, "playwright_profile");
-        _backpackCookiePath = Path.Combine(_baseDir, "playwright_profile", "cookies.backpack.json");
+        _backpackCookiePath = Path.Combine(_baseDir, "cookies.backpack.json");
     }
 
     public async Task InitAsync(CancellationToken ct = default)
@@ -53,89 +49,44 @@ public sealed class PlaywrightSession : IAsyncDisposable
 
         _playwright = await Playwright.CreateAsync();
 
-        var contextOptions = new BrowserTypeLaunchPersistentContextOptions
-        {
-            Headless = false,
-            SlowMo = 50,
-            ViewportSize = new ViewportSize { Width = 1280, Height = 720 },
-            UserAgent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/133.0.0.0 Safari/537.36",
-            Args = new[]
-            {
-                "--no-sandbox",
-                "--disable-setuid-sandbox",
-                "--disable-gpu",
-                "--disable-blink-features=AutomationControlled",
-                "--disable-infobars",
-                "--window-size=1280,720",
-                "--disable-dev-shm-usage"
-            },
-            IgnoreDefaultArgs = new[] { "--enable-automation" }
-        };
-
-        if (_proxy != null)
-        {
-            contextOptions.Proxy = new Proxy
-            {
-                Server = _proxy.Server,
-                Username = _proxy.Username,
-                Password = _proxy.Password
-            };
-            Console.WriteLine("Using proxy: " + _proxy.DisplayName);
-        }
-
         _context = await _playwright.Chromium.LaunchPersistentContextAsync(
             _userDataDir,
-            contextOptions);
+            new BrowserTypeLaunchPersistentContextOptions
+            {
+                Headless = false,
+                SlowMo = 50,
+                ViewportSize = new ViewportSize { Width = 1280, Height = 720 },
+                Args = new[]
+                {
+                    "--disable-blink-features=AutomationControlled",
+                    "--disable-infobars",
+                    "--window-size=1280,720",
+                    "--disable-dev-shm-usage"
+                },
+                IgnoreDefaultArgs = new[] { "--enable-automation" }
+            });
 
         await TryLoadCookiesAsync(_backpackCookiePath, "backpack.tf", ct);
 
-        // Stealth: patch browser fingerprint signals checked by Cloudflare
-        await _context.AddInitScriptAsync(@"
-            // Remove webdriver flag
-            Object.defineProperty(navigator, 'webdriver', { get: () => undefined, configurable: true });
-
-            // Mock chrome runtime (absent in plain Chromium builds)
-            if (!window.chrome) {
-                Object.defineProperty(window, 'chrome', {
-                    value: { runtime: {}, loadTimes: function(){}, csi: function(){}, app: {} },
-                    configurable: true
-                });
-            }
-
-            // Mock plugins (empty list is a bot signal)
-            Object.defineProperty(navigator, 'plugins', {
-                get: () => {
-                    const arr = [
-                        { name: 'Chrome PDF Plugin', filename: 'internal-pdf-viewer', description: 'Portable Document Format' },
-                        { name: 'Chrome PDF Viewer', filename: 'mhjfbmdgcfjbbpaeojofohoefgiehjai', description: '' },
-                        { name: 'Native Client', filename: 'internal-nacl-plugin', description: '' }
-                    ];
-                    Object.setPrototypeOf(arr, PluginArray.prototype);
-                    return arr;
-                },
-                configurable: true
+        if (!string.IsNullOrWhiteSpace(CfClearanceValue) &&
+            CfClearanceValue != "YOUR_CF_CLEARANCE_VALUE_HERE")
+        {
+            await _context.AddCookiesAsync(new[]
+            {
+                new Cookie
+                {
+                    Name = "cf_clearance",
+                    Value = CfClearanceValue,
+                    Domain = "backpack.tf",
+                    Path = "/"
+                }
             });
-
-            // Fix languages
-            Object.defineProperty(navigator, 'languages', {
-                get: () => ['en-US', 'en'],
-                configurable: true
-            });
-
-            // Fix permissions query (Cloudflare probes notifications permission)
-            try {
-                const _origQuery = navigator.permissions.query.bind(navigator.permissions);
-                navigator.permissions.query = (params) => {
-                    if (params && params.name === 'notifications') {
-                        return Promise.resolve({ state: 'denied', onchange: null });
-                    }
-                    return _origQuery(params);
-                };
-            } catch (e) {}
-        ");
-
-        // cf_clearance is IP-bound — injecting it from env var causes mismatches when using
-        // residential proxies. Let the browser acquire its own clearance via auto-solve.
+            Console.WriteLine("→ Added cf_clearance cookie");
+        }
+        else
+        {
+            Console.WriteLine("WARNING: cf_clearance is not set!");
+        }
 
         _page = await _context.NewPageAsync();
     }
@@ -265,23 +216,7 @@ public sealed class PlaywrightSession : IAsyncDisposable
         }
     }
 
-    public async Task ReinitAsync(ProxyEntry? newProxy, CancellationToken ct = default)
-    {
-        if (_context != null)
-        {
-            await _context.CloseAsync().ContinueWith(_ => { });
-            _context = null;
-        }
-
-        _playwright?.Dispose();
-        _playwright = null;
-        _page = null;
-
-        _proxy = newProxy;
-        await InitAsync(ct);
-    }
-
-public async ValueTask DisposeAsync()
+    public async ValueTask DisposeAsync()
     {
         if (_context != null)
         {

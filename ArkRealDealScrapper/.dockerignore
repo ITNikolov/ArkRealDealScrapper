@@ -1,0 +1,9 @@
+bin/
+obj/
+.vs/
+.git/
+**/bin/
+**/obj/
+**/playwright_profile/
+**/data/
+appsettings.Local.json

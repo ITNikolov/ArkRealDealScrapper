@@ -47,31 +47,19 @@ public static class BackpackPageWaiter
                 return;
             }
 
-            // Cloudflare JS challenge detected — with a real browser on a residential proxy
-            // the challenge should auto-solve. Wait up to 40 seconds for the browser to pass it.
-            Console.WriteLine($"Cloudflare challenge detected on: {page.Url}");
-            Console.WriteLine("Waiting up to 40s for browser to auto-solve...");
+            Console.WriteLine("\n!!! VERIFICATION DETECTED !!!");
+            Console.WriteLine("Solve the challenge in the browser, then press ENTER here...");
+            Console.ReadLine();
+            Console.WriteLine("Continuing after manual solve...\n");
 
-            PageWaitForSelectorOptions autoSolveWait = new PageWaitForSelectorOptions
+            PageWaitForSelectorOptions longWait = new PageWaitForSelectorOptions
             {
-                Timeout = 40000
+                Timeout = 60000
             };
 
-            Task<IElementHandle?> solvedListings = page.WaitForSelectorAsync("li.listing, div.item[data-listing_price]", autoSolveWait);
-            Task<IElementHandle?> solvedNoItems = page.WaitForSelectorAsync(":has-text('No items found')", autoSolveWait);
-
-            Task solveResult = await Task.WhenAny(solvedListings, solvedNoItems, Task.Delay(40000, ct));
-
-            if (solveResult == solvedListings || solveResult == solvedNoItems)
-            {
-                // Let any post-challenge redirects and cookie writes fully settle
-                await Task.Delay(3000, ct);
-                Console.WriteLine($"Cloudflare challenge auto-solved. Final URL: {page.Url}");
-            }
-            else
-            {
-                Console.WriteLine($"Cloudflare challenge not solved within 40s — proxy may be blocked. URL: {page.Url}");
-            }
+            await Task.WhenAny(
+                page.WaitForSelectorAsync("li.listing, div.item[data-listing_price]", longWait),
+                page.WaitForSelectorAsync(":has-text('No items found')", longWait));
         }
     }
 }
