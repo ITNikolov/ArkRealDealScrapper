@@ -1,0 +1,10 @@
+# Local secrets
+appsettings.Local.json
+
+# Cookies / sessions / browser profiles
+cookies*.json
+playwright_profile/
+
+# Runtime outputs
+debug_page.html
+data/seen.json
